@@ -53,7 +53,7 @@
   .pill-item.done .p-name { text-decoration: line-through; }
   
   .p-info { flex: 1; }
-  .p-name { font-size: 14px; font-weight: 500; color: var(--text); }
+  .p-name { font-size: 14px; font-weight: 500; color: var(--text); display: flex; align-items: center; }
   .p-stock { font-size: 11px; color: var(--muted); display: inline-block; padding: 2px 6px; background: var(--bg); border-radius: 6px; margin-top: 4px; }
   .caution-box { font-size: 11px; color: var(--warn-text); background: var(--warn-bg); padding: 6px 10px; border-radius: 6px; margin-top: 6px; line-height: 1.4; }
   
@@ -90,11 +90,16 @@
   .prog-bar-bg { height: 6px; background: var(--bg); border-radius: 3px; margin: 8px 0; overflow: hidden; }
   .prog-bar-fill { height: 100%; background: var(--primary); border-radius: 3px; transition: width 0.3s; }
   
-  /* Progress Note Styles */
   .p-note { font-size: 12px; color: var(--muted); margin-top: 6px; font-weight: 300; line-height: 1.5; }
   .p-ms { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
   .p-ms-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
   .p-ms-text { font-size: 11px; font-weight: 300; line-height: 1.4; }
+  
+  /* สีหมวดหมู่ยา */
+  .cat-pill { font-size: 10px; padding: 2px 8px; border-radius: 10px; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 5px; font-weight: 500; }
+  .p-legend { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
+  .p-leg { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); font-weight: 400; }
+  .p-leg-dot { width: 8px; height: 8px; border-radius: 50%; }
 </style>
 </head>
 <body>
@@ -132,6 +137,16 @@
 <div id="page-progress" class="page">
   <h1>ความคืบหน้า (Progress)</h1>
   <p class="subtitle">ระบบคำนวณจากวันที่เริ่มกินของแต่ละตัว</p>
+  
+  <div class="p-legend">
+    <div class="p-leg"><div class="p-leg-dot" style="background:#1D9E75;"></div>Fat-soluble</div>
+    <div class="p-leg"><div class="p-leg-dot" style="background:#378ADD;"></div>Water-soluble</div>
+    <div class="p-leg"><div class="p-leg-dot" style="background:#BA7517;"></div>Mineral</div>
+    <div class="p-leg"><div class="p-leg-dot" style="background:#3B6D11;"></div>Gut</div>
+    <div class="p-leg"><div class="p-leg-dot" style="background:#7F77DD;"></div>B Complex</div>
+    <div class="p-leg"><div class="p-leg-dot" style="background:#C4377A;"></div>Amino / Antioxidant</div>
+  </div>
+
   <div id="progress-content"></div>
 </div>
 
@@ -141,9 +156,23 @@
 
   <div class="add-form">
     <h3 style="margin-bottom: 15px;">+ เพิ่ม/แก้ไข อาหารเสริม</h3>
+    
     <div class="form-group">
       <label>ชื่อยา</label>
       <input type="text" id="f-name" placeholder="เช่น Vitamin C 1,000 มก.">
+    </div>
+
+    <div class="form-group">
+      <label>หมวดหมู่ (สีของยา)</label>
+      <select id="f-cat">
+        <option value="Fat-soluble">Fat-soluble (สีเขียวอมฟ้า)</option>
+        <option value="Water-soluble">Water-soluble (สีฟ้า)</option>
+        <option value="Mineral">Mineral (สีน้ำตาลทอง)</option>
+        <option value="Gut">Gut (สีเขียวเข้ม)</option>
+        <option value="B Complex">B Complex (สีม่วง)</option>
+        <option value="Amino">Amino / Antioxidant (สีชมพูแดง)</option>
+        <option value="Other">อื่นๆ (สีเทา)</option>
+      </select>
     </div>
     
     <div style="display:flex; gap:10px;">
@@ -182,7 +211,7 @@
     </div>
     
     <div class="form-group">
-      <label>หมวดหมู่การเห็นผล</label>
+      <label>ระยะเวลาเห็นผล</label>
       <select id="f-group">
         <option value="เห็นผลเร็ว">เห็นผลเร็ว (1-4 สัปดาห์)</option>
         <option value="เห็นผลปานกลาง">ปานกลาง (1-3 เดือน)</option>
@@ -221,14 +250,15 @@
 // ==========================================
 const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbwcGgnNZFar-BvNp175wqdiqDXU0A15lJgPO1Wdbavgna5KLo8HPKEgbkm6gpTSAD2G/exec';
 
-// สีของหมวดหมู่เพื่อใช้ในจุดหน้า Progress
-const CAT_COLORS = {
-  'Fat-soluble': '#1D9E75',
-  'Water-soluble': '#378ADD',
-  'Mineral': '#BA7517',
-  'Gut': '#3B6D11',
-  'B Complex': '#7F77DD',
-  'Amino': '#C4377A'
+// สีตามหมวดหมู่
+const CAT_THEME = {
+  'Fat-soluble':   { color: '#1D9E75', bg: '#E1F5EE', text: '#085041' },
+  'Water-soluble': { color: '#378ADD', bg: '#E6F1FB', text: '#0C447C' },
+  'Mineral':       { color: '#BA7517', bg: '#FAEEDA', text: '#633806' },
+  'Gut':           { color: '#3B6D11', bg: '#EAF3DE', text: '#27500A' },
+  'B Complex':     { color: '#7F77DD', bg: '#EEEDFE', text: '#3C3489' },
+  'Amino':         { color: '#C4377A', bg: '#FDE8F0', text: '#8C1D49' },
+  'Other':         { color: '#888780', bg: '#f1efe8', text: '#5f5e5a' }
 };
 
 // ==========================================
@@ -372,11 +402,15 @@ function renderSchedule() {
         
         let cautionHTML = m.cautions ? `<div class="caution-box">⚠️ ${m.cautions}</div>` : '';
         
+        // จุดสีหน้าชื่อยา
+        let theme = CAT_THEME[m.cat] || CAT_THEME['Other'];
+        let catDot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${theme.color};margin-right:8px;flex-shrink:0;"></span>`;
+        
         html += `
           <div class="pill-item ${isDone}" onclick="togglePill('${m.id}')">
             <div class="check">${checkMark}</div>
             <div class="p-info">
-              <div class="p-name">${m.name}</div>
+              <div class="p-name">${catDot}${m.name}</div>
               <div class="p-stock">เหลือ ${m.leftPills} เม็ด</div>
               ${cautionHTML}
             </div>
@@ -429,12 +463,12 @@ function saveForm() {
   let newObj = {
     id: generateId(),
     name: name,
+    cat: document.getElementById('f-cat').value, // เพิ่มหมวดหมู่สี
     totalPills: Number(document.getElementById('f-total').value) || 30,
     leftPills: Number(document.getElementById('f-total').value) || 30,
     startDate: document.getElementById('f-start').value,
     time: document.getElementById('f-time').value,
     days: selectedDays.join(','),
-    cat: 'Other', // ค่าเริ่มต้นสำหรับหมวดหมู่
     cautions: document.getElementById('f-cautions').value || '',
     targetWeeks: Number(document.getElementById('f-tw').value) || 4,
     group: document.getElementById('f-group').value,
@@ -449,150 +483,4 @@ function saveForm() {
   document.getElementById('f-name').value = '';
   document.getElementById('f-total').value = '';
   document.getElementById('f-cautions').value = '';
-  document.getElementById('f-note').value = '';
-  document.getElementById('f-milestones').value = '';
-  document.querySelectorAll('.day-cb').forEach(cb => cb.checked = false);
-  document.getElementById('btn-everyday').classList.remove('active');
-
-  alert('บันทึกยาใหม่เรียบร้อย!');
-  syncData();
-}
-
-function renderInventory() {
-  const container = document.getElementById('inventory-list');
-  container.innerHTML = '';
-
-  supplements.forEach(s => {
-    let pillsPerWeek = s.days.split(',').length;
-    let alertHtml = '';
-    if (s.active && s.leftPills <= pillsPerWeek) {
-      alertHtml = `<div class="smart-alert">🚨 ของจะหมดภายในสัปดาห์นี้! (เหลือ ${s.leftPills} เม็ด)</div>`;
-    }
-
-    container.innerHTML += `
-      <div class="inv-card ${!s.active ? 'paused' : ''}">
-        <div class="inv-header">
-          <div>
-            <h3 style="font-size:15px;">${s.name} ${!s.active ? '(พักการกิน)' : ''}</h3>
-            <p style="font-size:12px; color:var(--muted); margin-top:2px;">กินตอน ${s.time} | เป้า ${s.targetWeeks} สัปดาห์</p>
-            ${alertHtml}
-          </div>
-          <div style="text-align:right;">
-            <div style="font-size:18px; font-weight:600; color:var(--primary);">${s.leftPills}</div>
-            <div style="font-size:10px; color:var(--muted);">/ ${s.totalPills} เม็ด</div>
-          </div>
-        </div>
-        <div class="btn-group">
-          <button class="btn-sm btn-restock" onclick="restock('${s.id}')">+ เติมสต๊อก</button>
-          <button class="btn-sm btn-pause" onclick="togglePause('${s.id}')">${s.active ? '⏸️ พักยา' : '▶️ กลับมากิน'}</button>
-          <button class="btn-sm" style="background:#FFEAEA; color:var(--danger);" onclick="deleteSupp('${s.id}')">ลบ</button>
-        </div>
-      </div>
-    `;
-  });
-}
-
-function restock(id) {
-  let supp = supplements.find(s => s.id === id);
-  let add = prompt(`เติมยา: ${supp.name}\nใส่จำนวนเม็ดที่ซื้อมาเพิ่ม:`, "30");
-  if(add && !isNaN(add)) {
-    supp.leftPills += Number(add);
-    supp.totalPills += Number(add);
-    syncData();
-  }
-}
-
-function togglePause(id) {
-  let supp = supplements.find(s => s.id === id);
-  supp.active = !supp.active;
-  syncData();
-}
-
-function deleteSupp(id) {
-  if(confirm('ลบยานี้ออกจากระบบอย่างถาวร?')) {
-    supplements = supplements.filter(s => s.id !== id);
-    syncData();
-  }
-}
-
-// ==========================================
-// ระบบ Progress พร้อมการแสดงสรรพคุณและ Milestones
-// ==========================================
-function renderProgress() {
-  const container = document.getElementById('progress-content');
-  container.innerHTML = '';
-  
-  const groups = ['เห็นผลเร็ว', 'เห็นผลปานกลาง', 'เห็นผลระยะยาว'];
-  let now = new Date();
-
-  groups.forEach(g => {
-    let meds = supplements.filter(s => s.group === g);
-    if(meds.length > 0) {
-      let html = `<h3 style="font-size:13px; color:var(--muted); margin:15px 0 8px;">${g}</h3>`;
-      
-      meds.forEach(m => {
-        let start = new Date(m.startDate);
-        let diffTime = Math.abs(now - start);
-        let weeksPassed = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7));
-        if(now < start) weeksPassed = 0; 
-        
-        let pct = Math.min(100, Math.round((weeksPassed / m.targetWeeks) * 100));
-        let status = (pct >= 100) ? '✅ บรรลุเป้าหมายแล้ว' : `กำลังทำสัปดาห์ที่ ${weeksPassed+1}`;
-        if (!m.active) status = '⏸️ หยุดพัก';
-
-        // โค้ดแสดง Note (สรรพคุณ)
-        let noteHtml = m.note ? `<div class="p-note">${m.note}</div>` : '';
-        
-        // โค้ดแปลง Milestones (1:หลับดี | 2:สดชื่น) ให้เป็นจุดสีๆ
-        let msHtml = '';
-        if(m.milestones) {
-          let dotColor = CAT_COLORS[m.cat] || '#1D9E75'; // ดึงสีตามหมวดหมู่ ถ้าไม่มีให้เป็นสีเขียว
-          let parts = m.milestones.split('|');
-          parts.forEach(part => {
-            let split = part.split(':');
-            if(split.length === 2) {
-              let w = parseInt(split[0].trim());
-              let text = split[1].trim();
-              let hit = m.active && (weeksPassed >= w); // เช็คว่ากินถึงสัปดาห์นี้หรือยัง
-              let bColor = hit ? dotColor : '#d3d1c7';
-              let tColor = hit ? 'var(--text)' : '#b4b2a9';
-              let check = hit ? ' ✓' : '';
-              
-              msHtml += `
-                <div class="p-ms">
-                  <div class="p-ms-dot" style="background:${bColor};"></div>
-                  <span class="p-ms-text" style="color:${tColor};">สัปดาห์ ${w} — ${text}${check}</span>
-                </div>
-              `;
-            }
-          });
-        }
-
-        html += `
-          <div class="prog-card">
-            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-              <span style="font-size:14px; font-weight:500;">${m.name}</span>
-              <span style="font-size:11px; color:var(--muted);">${status}</span>
-            </div>
-            <div class="prog-bar-bg">
-              <div class="prog-bar-fill" style="width: ${m.active ? pct : 0}%; background: ${pct>=100 ? '#1D9E75' : 'var(--primary)'};"></div>
-            </div>
-            <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--muted); margin-bottom:4px;">
-              <span>กินมาแล้ว ${weeksPassed} สัปดาห์</span>
-              <span>เป้าหมาย ${m.targetWeeks} สัปดาห์</span>
-            </div>
-            ${noteHtml}
-            ${msHtml}
-          </div>
-        `;
-      });
-      container.innerHTML += html;
-    }
-  });
-}
-
-// เริ่มการทำงาน
-initApp();
-</script>
-</body>
-</html>
+  document.getElementById
