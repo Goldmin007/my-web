@@ -483,4 +483,157 @@ function saveForm() {
   document.getElementById('f-name').value = '';
   document.getElementById('f-total').value = '';
   document.getElementById('f-cautions').value = '';
-  document.getElementById
+  document.getElementById('f-note').value = '';
+  document.getElementById('f-milestones').value = '';
+  document.getElementById('f-cat').value = 'Fat-soluble'; // รีเซ็ตหมวดหมู่
+  document.querySelectorAll('.day-cb').forEach(cb => cb.checked = false);
+  document.getElementById('btn-everyday').classList.remove('active');
+
+  alert('บันทึกยาใหม่เรียบร้อย!');
+  syncData();
+}
+
+function renderInventory() {
+  const container = document.getElementById('inventory-list');
+  container.innerHTML = '';
+
+  supplements.forEach(s => {
+    let pillsPerWeek = s.days.split(',').length;
+    let alertHtml = '';
+    if (s.active && s.leftPills <= pillsPerWeek) {
+      alertHtml = `<div class="smart-alert">🚨 ของจะหมดภายในสัปดาห์นี้! (เหลือ ${s.leftPills} เม็ด)</div>`;
+    }
+
+    let theme = CAT_THEME[s.cat] || CAT_THEME['Other'];
+    let catPill = `<span class="cat-pill" style="background:${theme.bg}; color:${theme.text};"><span style="width:6px;height:6px;border-radius:50%;background:${theme.color};display:inline-block;flex-shrink:0;"></span>${s.cat}</span>`;
+
+    container.innerHTML += `
+      <div class="inv-card ${!s.active ? 'paused' : ''}">
+        <div class="inv-header">
+          <div>
+            ${catPill}
+            <h3 style="font-size:15px;">${s.name} ${!s.active ? '(พักการกิน)' : ''}</h3>
+            <p style="font-size:12px; color:var(--muted); margin-top:2px;">กินตอน ${s.time} | เป้า ${s.targetWeeks} สัปดาห์</p>
+            ${alertHtml}
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:18px; font-weight:600; color:var(--primary);">${s.leftPills}</div>
+            <div style="font-size:10px; color:var(--muted);">/ ${s.totalPills} เม็ด</div>
+          </div>
+        </div>
+        <div class="btn-group">
+          <button class="btn-sm btn-restock" onclick="restock('${s.id}')">+ เติมสต๊อก</button>
+          <button class="btn-sm btn-pause" onclick="togglePause('${s.id}')">${s.active ? '⏸️ พักยา' : '▶️ กลับมากิน'}</button>
+          <button class="btn-sm" style="background:#FFEAEA; color:var(--danger);" onclick="deleteSupp('${s.id}')">ลบ</button>
+        </div>
+      </div>
+    `;
+  });
+}
+
+function restock(id) {
+  let supp = supplements.find(s => s.id === id);
+  let add = prompt(`เติมยา: ${supp.name}\nใส่จำนวนเม็ดที่ซื้อมาเพิ่ม:`, "30");
+  if(add && !isNaN(add)) {
+    supp.leftPills += Number(add);
+    supp.totalPills += Number(add);
+    syncData();
+  }
+}
+
+function togglePause(id) {
+  let supp = supplements.find(s => s.id === id);
+  supp.active = !supp.active;
+  syncData();
+}
+
+function deleteSupp(id) {
+  if(confirm('ลบยานี้ออกจากระบบอย่างถาวร?')) {
+    supplements = supplements.filter(s => s.id !== id);
+    syncData();
+  }
+}
+
+// ==========================================
+// ระบบ Progress พร้อมสีแยกหมวดหมู่
+// ==========================================
+function renderProgress() {
+  const container = document.getElementById('progress-content');
+  container.innerHTML = '';
+  
+  const groups = ['เห็นผลเร็ว', 'เห็นผลปานกลาง', 'เห็นผลระยะยาว'];
+  let now = new Date();
+
+  groups.forEach(g => {
+    let meds = supplements.filter(s => s.group === g);
+    if(meds.length > 0) {
+      let html = `<h3 style="font-size:13px; color:var(--muted); margin:15px 0 8px;">${g}</h3>`;
+      
+      meds.forEach(m => {
+        let start = new Date(m.startDate);
+        let diffTime = Math.abs(now - start);
+        let weeksPassed = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7));
+        if(now < start) weeksPassed = 0; 
+        
+        let pct = Math.min(100, Math.round((weeksPassed / m.targetWeeks) * 100));
+        let status = (pct >= 100) ? '✅ บรรลุเป้าหมายแล้ว' : `กำลังทำสัปดาห์ที่ ${weeksPassed+1}`;
+        if (!m.active) status = '⏸️ หยุดพัก';
+
+        // โหลดชุดสีตามหมวดหมู่
+        let theme = CAT_THEME[m.cat] || CAT_THEME['Other'];
+        let catPill = `<span class="cat-pill" style="background:${theme.bg}; color:${theme.text};"><span style="width:6px;height:6px;border-radius:50%;background:${theme.color};display:inline-block;flex-shrink:0;"></span>${m.cat}</span>`;
+
+        let noteHtml = m.note ? `<div class="p-note">${m.note}</div>` : '';
+        
+        let msHtml = '';
+        if(m.milestones) {
+          let parts = m.milestones.split('|');
+          parts.forEach(part => {
+            let split = part.split(':');
+            if(split.length === 2) {
+              let w = parseInt(split[0].trim());
+              let text = split[1].trim();
+              let hit = m.active && (weeksPassed >= w);
+              let bColor = hit ? theme.color : '#d3d1c7';
+              let tColor = hit ? 'var(--text)' : '#b4b2a9';
+              let check = hit ? ' ✓' : '';
+              
+              msHtml += `
+                <div class="p-ms">
+                  <div class="p-ms-dot" style="background:${bColor};"></div>
+                  <span class="p-ms-text" style="color:${tColor};">สัปดาห์ ${w} — ${text}${check}</span>
+                </div>
+              `;
+            }
+          });
+        }
+
+        html += `
+          <div class="prog-card">
+            ${catPill}
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+              <span style="font-size:14px; font-weight:500;">${m.name}</span>
+              <span style="font-size:11px; color:var(--muted);">${status}</span>
+            </div>
+            <div class="prog-bar-bg">
+              <div class="prog-bar-fill" style="width: ${m.active ? pct : 0}%; background: ${theme.color};"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--muted); margin-bottom:4px;">
+              <span>กินมาแล้ว ${weeksPassed} สัปดาห์</span>
+              <span>เป้าหมาย ${m.targetWeeks} สัปดาห์</span>
+            </div>
+            ${noteHtml}
+            ${msHtml}
+          </div>
+        `;
+      });
+      container.innerHTML += html;
+    }
+  });
+}
+
+// เริ่มการทำงาน
+initApp();
+</script>
+</body>
+</html>
