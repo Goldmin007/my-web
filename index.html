@@ -1,9 +1,284 @@
-<html>
-  <head>
-    <title>เว็บของฉัน</title>
-  </head>
-  <body>
-    <h1>สวัสดี! นี่คือตารางอาหารเสริมของฉัน</h1>
-    <p>กำลังฝึกทำเว็บไซต์บน GitHub Pages</p>
-  </body>
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>My Supplements Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Sarabun', sans-serif; background: #f8f7f4; color: #1a1a18; padding-bottom: 2rem; }
+  
+  /* Navigation */
+  .nav { display: flex; background: #fff; border-bottom: 1px solid #e8e6e0; position: sticky; top: 0; z-index: 20; }
+  .nav-tab { flex: 1; padding: 14px 8px; font-family: 'Sarabun'; font-size: 14px; font-weight: 500; color: #888780; background: transparent; border: none; cursor: pointer; border-bottom: 2px solid transparent; transition: 0.2s; }
+  .nav-tab.active { color: #1a1a18; border-bottom-color: #1D9E75; }
+  
+  .page { display: none; padding: 1.25rem; }
+  .page.show { display: block; }
+  h1 { font-size: 20px; font-weight: 600; margin-bottom: 5px; }
+  .subtitle { font-size: 13px; color: #888780; margin-bottom: 20px; }
+
+  /* Schedule Styles */
+  .time-block { margin-bottom: 1.5rem; }
+  .time-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .time-label { font-size: 13px; font-weight: 600; color: #5F5E5A; }
+  .time-line { flex: 1; height: 1px; background: #e0ded8; }
+  
+  .pill-item { display: flex; align-items: center; justify-content: space-between; background: #fff; padding: 12px; border-radius: 12px; border: 1px solid #e8e6e0; margin-bottom: 8px; cursor: pointer; transition: 0.2s; }
+  .pill-info { display: flex; align-items: center; gap: 10px; }
+  .pill-name { font-size: 14px; font-weight: 500; }
+  .pill-stock { font-size: 11px; color: #888780; background: #f1efe8; padding: 2px 8px; border-radius: 10px; }
+  
+  .check { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #ccc; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; color: transparent; transition: 0.2s; }
+  .pill-item.done { opacity: 0.6; }
+  .pill-item.done .check { background: #1D9E75; border-color: #1D9E75; color: #fff; }
+  .pill-item.done .pill-name { text-decoration: line-through; }
+
+  /* Inventory Styles */
+  .inv-card { background: #fff; padding: 15px; border-radius: 12px; border: 1px solid #e8e6e0; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+  .inv-details h3 { font-size: 15px; margin-bottom: 4px; }
+  .inv-details p { font-size: 12px; color: #5F5E5A; }
+  .btn-delete { background: #FFEAEA; color: #D83030; border: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; font-family: 'Sarabun'; font-weight: 500; }
+
+  /* Form Styles */
+  .add-form { background: #fff; padding: 15px; border-radius: 12px; border: 1px dashed #1D9E75; margin-bottom: 20px; }
+  .form-group { margin-bottom: 12px; }
+  .form-group label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 5px; color: #5F5E5A;}
+  input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-family: 'Sarabun'; font-size: 14px; }
+  .btn-submit { width: 100%; background: #1D9E75; color: #fff; border: none; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 10px; font-family: 'Sarabun';}
+
+  .empty-state { text-align: center; color: #888780; font-size: 14px; padding: 20px; }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <button class="nav-tab active" onclick="switchPage('schedule')">ตารางวันนี้</button>
+  <button class="nav-tab" onclick="switchPage('inventory')">คลังยา (เพิ่ม/ลด)</button>
+</div>
+
+<div id="page-schedule" class="page show">
+  <h1 id="today-title">ตารางอาหารเสริม</h1>
+  <p class="subtitle" id="today-date"></p>
+  
+  <div id="schedule-container">
+    </div>
+</div>
+
+<div id="page-inventory" class="page">
+  <h1>คลังอาหารเสริม</h1>
+  <p class="subtitle">จัดการรายการยาและสต๊อก</p>
+
+  <div class="add-form">
+    <h3 style="font-size:14px; margin-bottom:10px;">+ เพิ่มยาใหม่</h3>
+    <div class="form-group">
+      <label>ชื่อยา / อาหารเสริม</label>
+      <input type="text" id="med-name" placeholder="เช่น Vitamin C 500mg">
+    </div>
+    <div class="form-group">
+      <label>จำนวนเม็ดทั้งหมดที่มี (สต๊อกตั้งต้น)</label>
+      <input type="number" id="med-total" placeholder="เช่น 60">
+    </div>
+    <div class="form-group">
+      <label>ช่วงเวลาที่กิน</label>
+      <select id="med-time">
+        <option value="หลังตื่นนอน">หลังตื่นนอน (ท้องว่าง)</option>
+        <option value="เช้า">เช้า (พร้อมอาหาร)</option>
+        <option value="บ่าย">บ่าย</option>
+        <option value="ก่อนนอน">ก่อนนอน</option>
+      </select>
+    </div>
+    <button class="btn-submit" onclick="addSupplement()">บันทึกข้อมูลยา</button>
+  </div>
+
+  <div id="inventory-list">
+    </div>
+</div>
+
+<script>
+// --- ส่วนที่ 1: ระบบจัดการข้อมูล (Database จำลอง) ---
+// โหลดข้อมูลจาก localStorage (ถ้าไม่มีให้เป็น Array ว่าง)
+let supplements = JSON.parse(localStorage.getItem('mySupplements')) || [];
+// โหลดประวัติการกินยาของวันนี้ (เพื่อไม่ให้กดซ้ำแล้วสต๊อกลดเรื่อยๆ)
+let takenHistory = JSON.parse(localStorage.getItem('takenHistory')) || {};
+
+const todayStr = new Date().toISOString().split('T')[0]; // เช่น "2026-04-19"
+
+// ฟังก์ชันสลับหน้าเว็บ
+function switchPage(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('show'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  
+  document.getElementById('page-' + pageId).classList.add('show');
+  event.target.classList.add('active');
+
+  if(pageId === 'schedule') renderSchedule();
+  if(pageId === 'inventory') renderInventory();
+}
+
+// --- ส่วนที่ 2: ระบบคลังยา (Inventory) ---
+function addSupplement() {
+  const name = document.getElementById('med-name').value;
+  const total = parseInt(document.getElementById('med-total').value);
+  const time = document.getElementById('med-time').value;
+
+  if(!name || isNaN(total)) {
+    alert('กรุณากรอกชื่อยาและจำนวนเม็ดให้ครบถ้วน');
+    return;
+  }
+
+  const newSupp = {
+    id: Date.now().toString(), // สร้าง ID ไม่ซ้ำกัน
+    name: name,
+    totalPills: total,
+    leftPills: total, // ตอนแรกจำนวนที่เหลือ = จำนวนทั้งหมด
+    time: time
+  };
+
+  supplements.push(newSupp);
+  saveData();
+  
+  // ล้างค่าฟอร์ม
+  document.getElementById('med-name').value = '';
+  document.getElementById('med-total').value = '';
+  
+  renderInventory();
+  alert('เพิ่มยาสำเร็จ!');
+}
+
+function deleteSupplement(id) {
+  if(confirm('คุณแน่ใจหรือไม่ที่จะลบรายการนี้?')) {
+    supplements = supplements.filter(s => s.id !== id);
+    saveData();
+    renderInventory();
+  }
+}
+
+function renderInventory() {
+  const container = document.getElementById('inventory-list');
+  container.innerHTML = '';
+
+  if(supplements.length === 0) {
+    container.innerHTML = '<div class="empty-state">ยังไม่มีรายการยา กดเพิ่มที่ฟอร์มด้านบนได้เลยครับ</div>';
+    return;
+  }
+
+  supplements.forEach(s => {
+    // คำนวณเปอร์เซ็นตยาที่เหลือ
+    const pct = Math.round((s.leftPills / s.totalPills) * 100);
+    let stockColor = pct < 20 ? '#D83030' : '#1D9E75'; // ถ้ายาเหลือน้อยกว่า 20% ให้เป็นสีแดง
+
+    container.innerHTML += `
+      <div class="inv-card">
+        <div class="inv-details">
+          <h3>${s.name}</h3>
+          <p>เวลา: ${s.time}</p>
+          <p style="color: ${stockColor}; font-weight: 600; margin-top: 4px;">เหลือ ${s.leftPills} / ${s.totalPills} เม็ด</p>
+        </div>
+        <button class="btn-delete" onclick="deleteSupplement('${s.id}')">ลบ</button>
+      </div>
+    `;
+  });
+}
+
+// --- ส่วนที่ 3: ระบบตารางประจำวัน (Schedule) ---
+function renderSchedule() {
+  // เซ็ตวันที่แสดงผล
+  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+  document.getElementById('today-date').innerText = new Date().toLocaleDateString('th-TH', options);
+
+  const container = document.getElementById('schedule-container');
+  container.innerHTML = '';
+
+  if(supplements.length === 0) {
+    container.innerHTML = '<div class="empty-state">ไม่มีคิวต้องกินยา ไปเพิ่มยาที่หน้าคลังยาได้เลยครับ</div>';
+    return;
+  }
+
+  // จัดกลุ่มยาตามเวลา
+  const timeGroups = {
+    'หลังตื่นนอน': [],
+    'เช้า': [],
+    'บ่าย': [],
+    'ก่อนนอน': []
+  };
+
+  supplements.forEach(s => {
+    if(timeGroups[s.time]) timeGroups[s.time].push(s);
+  });
+
+  // สร้าง HTML ตามช่วงเวลา
+  for (const [time, meds] of Object.entries(timeGroups)) {
+    if (meds.length > 0) {
+      let blockHtml = `
+        <div class="time-block">
+          <div class="time-header">
+            <span class="time-label">${time}</span>
+            <div class="time-line"></div>
+          </div>
+      `;
+
+      meds.forEach(med => {
+        // เช็คว่าวันนี้กินยานี้ไปหรือยัง
+        const historyKey = `${todayStr}_${med.id}`;
+        const isTaken = takenHistory[historyKey] ? 'done' : '';
+        const checkMark = takenHistory[historyKey] ? '✓' : '';
+
+        blockHtml += `
+          <div class="pill-item ${isTaken}" onclick="togglePill('${med.id}')">
+            <div class="pill-info">
+              <div class="check">${checkMark}</div>
+              <div>
+                <div class="pill-name">${med.name}</div>
+                <div class="pill-stock">เหลือ ${med.leftPills} เม็ด</div>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      blockHtml += `</div>`;
+      container.innerHTML += blockHtml;
+    }
+  }
+}
+
+// ฟังก์ชันเวลากด Check/Uncheck ยา
+function togglePill(medId) {
+  const historyKey = `${todayStr}_${medId}`;
+  
+  // หายาในคลัง
+  const suppIndex = supplements.findIndex(s => s.id === medId);
+  if(suppIndex === -1) return;
+
+  if (takenHistory[historyKey]) {
+    // กรณียกเลิกการกิน (Uncheck) -> คืนค่ายาเข้าสต๊อก 1 เม็ด
+    delete takenHistory[historyKey];
+    supplements[suppIndex].leftPills += 1;
+  } else {
+    // กรณีกดกินยา (Check) -> เช็คก่อนว่ายาหมดไหม
+    if (supplements[suppIndex].leftPills <= 0) {
+      alert('ยาหมดสต๊อกแล้วครับ!');
+      return;
+    }
+    takenHistory[historyKey] = true;
+    supplements[suppIndex].leftPills -= 1;
+  }
+
+  saveData();
+  renderSchedule(); // โหลดตารางใหม่
+}
+
+// บันทึกข้อมูลลงเครื่อง
+function saveData() {
+  localStorage.setItem('mySupplements', JSON.stringify(supplements));
+  localStorage.setItem('takenHistory', JSON.stringify(takenHistory));
+}
+
+// สั่งทำงานครั้งแรกเมื่อเปิดเว็บ
+renderSchedule();
+
+</script>
+</body>
 </html>
