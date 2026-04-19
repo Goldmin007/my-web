@@ -270,12 +270,38 @@ function togglePill(medId) {
   renderSchedule(); // โหลดตารางใหม่
 }
 
-// บันทึกข้อมูลลงเครื่อง
-function saveData() {
-  localStorage.setItem('mySupplements', JSON.stringify(supplements));
-  localStorage.setItem('takenHistory', JSON.stringify(takenHistory));
+// URL ที่คุณเพิ่งก็อปปี้มา
+const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwcGgnNZFar-BvNp175wqdiqDXU0A15lJgPO1Wdbavgna5KLo8HPKEgbkm6gpTSAD2G/exec"; 
+
+// ดึงข้อมูลจาก Google Sheet เมื่อเปิดเว็บ
+async function loadDataFromSheet() {
+  try {
+    let response = await fetch(GOOGLE_SHEET_URL);
+    let data = await response.json();
+    supplements = data; // โหลดข้อมูลเข้าคลังยา
+    renderSchedule();
+    renderInventory();
+  } catch (error) {
+    console.log("โหลดข้อมูลไม่สำเร็จ", error);
+  }
 }
 
+// บันทึกข้อมูลกลับไปที่ Google Sheet ทุกครั้งที่มีการเพิ่มยา/กดยากิน
+async function saveData() {
+  // บันทึก history ลงเครื่องเหมือนเดิม
+  localStorage.setItem('takenHistory', JSON.stringify(takenHistory)); 
+
+  // ส่งสต๊อกยาไปอัปเดตที่ Google Sheets
+  fetch(GOOGLE_SHEET_URL, {
+    method: 'POST',
+    redirect: 'follow', // จำเป็นสำหรับ Google Apps Script
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(supplements)
+  });
+}
+
+// สั่งทำงานครั้งแรกเมื่อเปิดเว็บ (เปลี่ยนจากบรรทัดล่างสุดของสคริปต์)
+loadDataFromSheet();
 // สั่งทำงานครั้งแรกเมื่อเปิดเว็บ
 renderSchedule();
 
