@@ -72,11 +72,21 @@
   .add-form { background: var(--card); border: 1px dashed var(--primary); border-radius: 12px; padding: 15px; margin-bottom: 20px; }
   .form-group { margin-bottom: 12px; }
   .form-group label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 5px; color: var(--muted); }
+  /* แก้สี input ให้แสดงผลดีทั้งโหมดสว่างและโหมดมืด */
   .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-family: 'Sarabun'; font-size: 14px; }
-  .checkbox-group { display: flex; gap: 8px; flex-wrap: wrap; }
+  
+  /* รองรับ Date Picker ใน Dark Mode */
+  [data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+
+  .checkbox-group { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .checkbox-group label { display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 400; background: var(--bg); padding: 5px 10px; border-radius: 20px; border: 1px solid var(--border); cursor: pointer; }
   .checkbox-group input:checked + span { font-weight: 600; color: var(--primary); }
-  .btn-submit { width: 100%; padding: 12px; background: var(--primary); color: #fff; font-family: 'Sarabun'; font-size: 14px; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; }
+  
+  /* ปุ่มกินทุกวัน */
+  .btn-all-days { padding: 5px 10px; font-size: 11px; border-radius: 20px; border: 1px solid var(--primary); background: transparent; color: var(--primary); cursor: pointer; transition: 0.2s; font-family: 'Sarabun'; font-weight: 600; margin-left: 5px; }
+  .btn-all-days.active { background: var(--primary); color: #fff; }
+
+  .btn-submit { width: 100%; padding: 12px; background: var(--primary); color: #fff; font-family: 'Sarabun'; font-size: 14px; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; margin-top: 10px; }
 
   /* Progress */
   .prog-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 10px; }
@@ -127,36 +137,47 @@
   <p class="subtitle">ระบบจะเตือนถ้ายาเหลือพอกินไม่ถึง 7 วัน</p>
 
   <div class="add-form">
-    <h3>+ เพิ่ม/แก้ไข อาหารเสริม</h3><br>
+    <h3 style="margin-bottom: 15px;">+ เพิ่ม/แก้ไข อาหารเสริม</h3>
     <div class="form-group">
-      <label>ชื่อยา</label><input type="text" id="f-name">
+      <label>ชื่อยา</label>
+      <input type="text" id="f-name" placeholder="เช่น Vitamin C 1,000 มก.">
     </div>
+    
     <div style="display:flex; gap:10px;">
       <div class="form-group" style="flex:1;">
-        <label>จำนวนเม็ด</label><input type="number" id="f-total">
+        <label>จำนวนเม็ด</label>
+        <input type="number" id="f-total" placeholder="จำนวนในขวด">
       </div>
       <div class="form-group" style="flex:1;">
-        <label>วันที่เริ่มกิน</label><input type="date" id="f-start">
+        <label>วันที่เริ่มกิน</label>
+        <input type="date" id="f-start">
       </div>
     </div>
+    
     <div class="form-group">
       <label>วันเวลาที่กิน (กดเลือกได้หลายวัน)</label>
       <div class="checkbox-group" id="f-days">
-        <label><input type="checkbox" value="sun"> <span>อา</span></label>
-        <label><input type="checkbox" value="mon"> <span>จ</span></label>
-        <label><input type="checkbox" value="tue"> <span>อ</span></label>
-        <label><input type="checkbox" value="wed"> <span>พ</span></label>
-        <label><input type="checkbox" value="thu"> <span>พฤ</span></label>
-        <label><input type="checkbox" value="fri"> <span>ศ</span></label>
-        <label><input type="checkbox" value="sat"> <span>ส</span></label>
+        <label><input type="checkbox" class="day-cb" value="sun"> <span>อา</span></label>
+        <label><input type="checkbox" class="day-cb" value="mon"> <span>จ</span></label>
+        <label><input type="checkbox" class="day-cb" value="tue"> <span>อ</span></label>
+        <label><input type="checkbox" class="day-cb" value="wed"> <span>พ</span></label>
+        <label><input type="checkbox" class="day-cb" value="thu"> <span>พฤ</span></label>
+        <label><input type="checkbox" class="day-cb" value="fri"> <span>ศ</span></label>
+        <label><input type="checkbox" class="day-cb" value="sat"> <span>ส</span></label>
+        <button class="btn-all-days" id="btn-everyday" onclick="toggleEveryday()">กินทุกวัน</button>
       </div>
     </div>
+    
     <div class="form-group">
       <label>ช่วงเวลา</label>
       <select id="f-time">
-        <option>หลังตื่นนอน</option><option>เช้า</option><option>บ่าย</option><option>ก่อนนอน</option>
+        <option>หลังตื่นนอน</option>
+        <option>เช้า</option>
+        <option>บ่าย</option>
+        <option>ก่อนนอน</option>
       </select>
     </div>
+    
     <div class="form-group">
       <label>หมวดหมู่การเห็นผล</label>
       <select id="f-group">
@@ -165,13 +186,18 @@
         <option value="เห็นผลระยะยาว">ระยะยาว (3 เดือน+)</option>
       </select>
     </div>
+    
     <div class="form-group">
-      <label>เป้าหมาย (สัปดาห์)</label><input type="number" id="f-tw" placeholder="เช่น 4">
+      <label>เป้าหมาย (สัปดาห์)</label>
+      <input type="number" id="f-tw" placeholder="เช่น 4">
     </div>
+    
     <div class="form-group">
-      <label>ข้อควรระวัง (ถ้ามี)</label><input type="text" id="f-cautions" placeholder="เช่น ห้ามกินพร้อมนม">
+      <label>ข้อควรระวัง (ถ้ามี)</label>
+      <input type="text" id="f-cautions" placeholder="เช่น ห้ามกินพร้อมนม">
     </div>
-    <button class="btn-submit" onclick="saveForm()">บันทึกข้อมูล</button>
+    
+    <button class="btn-submit" onclick="saveForm()">บันทึกข้อมูลยา</button>
   </div>
 
   <div id="inventory-list"></div>
@@ -179,7 +205,7 @@
 
 <script>
 // ==========================================
-// ส่วนตั้งค่า: เปลี่ยน URL ของคุณตรงนี้!
+// ส่วนตั้งค่า: URL Google Sheets ของคุณ
 // ==========================================
 const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbwcGgnNZFar-BvNp175wqdiqDXU0A15lJgPO1Wdbavgna5KLo8HPKEgbkm6gpTSAD2G/exec';
 
@@ -221,6 +247,8 @@ async function initApp() {
   document.getElementById('sync-banner').classList.remove('show');
 
   selectDay(currentDay);
+  
+  // เซ็ตวันที่ปัจจุบันให้ช่อง "วันที่เริ่มกิน" เป็นค่าเริ่มต้น
   document.getElementById('f-start').value = todayStr;
 }
 
@@ -239,7 +267,7 @@ function syncData() {
 }
 
 // ==========================================
-// UI: สลับหน้า & โหมดมืด
+// UI: สลับหน้า & โหมดมืด & เลือกวันในฟอร์ม
 // ==========================================
 function switchPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('show'));
@@ -263,6 +291,36 @@ function toggleTheme() {
     localStorage.setItem('theme', 'dark');
   }
 }
+
+// ฟังก์ชันปุ่ม "กินทุกวัน" ในฟอร์ม
+function toggleEveryday() {
+  const btn = document.getElementById('btn-everyday');
+  const checkboxes = document.querySelectorAll('.day-cb');
+  const isAllChecked = Array.from(checkboxes).every(cb => cb.checked);
+  
+  if (isAllChecked) {
+    // ถ้าติ๊กครบหมดแล้ว ให้เอาติ๊กออก
+    checkboxes.forEach(cb => cb.checked = false);
+    btn.classList.remove('active');
+  } else {
+    // ถ้ายังไม่ครบ ให้ติ๊กให้หมด
+    checkboxes.forEach(cb => cb.checked = true);
+    btn.classList.add('active');
+  }
+}
+
+// อัปเดตสถานะปุ่ม "กินทุกวัน" หากผู้ใช้กดติ๊กเองทีละช่อง
+document.querySelectorAll('.day-cb').forEach(cb => {
+  cb.addEventListener('change', () => {
+    const checkboxes = document.querySelectorAll('.day-cb');
+    const isAllChecked = Array.from(checkboxes).every(c => c.checked);
+    if(isAllChecked) {
+      document.getElementById('btn-everyday').classList.add('active');
+    } else {
+      document.getElementById('btn-everyday').classList.remove('active');
+    }
+  });
+});
 
 // ==========================================
 // ระบบ Schedule (ตารางอัตโนมัติ)
@@ -358,7 +416,7 @@ function saveForm() {
 
   // ดึงค่าวันทั้งหมดที่เลือก
   let selectedDays = [];
-  document.querySelectorAll('#f-days input:checked').forEach(cb => selectedDays.push(cb.value));
+  document.querySelectorAll('.day-cb:checked').forEach(cb => selectedDays.push(cb.value));
   if(selectedDays.length === 0) { alert("กรุณาเลือกวันกินอย่างน้อย 1 วัน"); return; }
 
   let newObj = {
@@ -381,7 +439,8 @@ function saveForm() {
   document.getElementById('f-name').value = '';
   document.getElementById('f-total').value = '';
   document.getElementById('f-cautions').value = '';
-  document.querySelectorAll('#f-days input').forEach(cb => cb.checked = false);
+  document.querySelectorAll('.day-cb').forEach(cb => cb.checked = false);
+  document.getElementById('btn-everyday').classList.remove('active');
 
   alert('บันทึกยาใหม่เรียบร้อย!');
   syncData();
