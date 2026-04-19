@@ -72,17 +72,14 @@
   .add-form { background: var(--card); border: 1px dashed var(--primary); border-radius: 12px; padding: 15px; margin-bottom: 20px; }
   .form-group { margin-bottom: 12px; }
   .form-group label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 5px; color: var(--muted); }
-  /* แก้สี input ให้แสดงผลดีทั้งโหมดสว่างและโหมดมืด */
   .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-family: 'Sarabun'; font-size: 14px; }
   
-  /* รองรับ Date Picker ใน Dark Mode */
   [data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
 
   .checkbox-group { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .checkbox-group label { display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 400; background: var(--bg); padding: 5px 10px; border-radius: 20px; border: 1px solid var(--border); cursor: pointer; }
   .checkbox-group input:checked + span { font-weight: 600; color: var(--primary); }
   
-  /* ปุ่มกินทุกวัน */
   .btn-all-days { padding: 5px 10px; font-size: 11px; border-radius: 20px; border: 1px solid var(--primary); background: transparent; color: var(--primary); cursor: pointer; transition: 0.2s; font-family: 'Sarabun'; font-weight: 600; margin-left: 5px; }
   .btn-all-days.active { background: var(--primary); color: #fff; }
 
@@ -92,6 +89,12 @@
   .prog-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 10px; }
   .prog-bar-bg { height: 6px; background: var(--bg); border-radius: 3px; margin: 8px 0; overflow: hidden; }
   .prog-bar-fill { height: 100%; background: var(--primary); border-radius: 3px; transition: width 0.3s; }
+  
+  /* Progress Note Styles */
+  .p-note { font-size: 12px; color: var(--muted); margin-top: 6px; font-weight: 300; line-height: 1.5; }
+  .p-ms { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
+  .p-ms-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .p-ms-text { font-size: 11px; font-weight: 300; line-height: 1.4; }
 </style>
 </head>
 <body>
@@ -186,9 +189,18 @@
         <option value="เห็นผลระยะยาว">ระยะยาว (3 เดือน+)</option>
       </select>
     </div>
+
+    <div class="form-group">
+      <label>สรรพคุณ/ประโยชน์ (แสดงในหน้า Progress)</label>
+      <input type="text" id="f-note" placeholder="เช่น นอนหลับลึกขึ้น กล้ามเนื้อไม่ล้า">
+    </div>
+    <div class="form-group">
+      <label>ผลลัพธ์รายสัปดาห์ (รูปแบบ: สัปดาห์:ข้อความ | สัปดาห์:ข้อความ)</label>
+      <input type="text" id="f-milestones" placeholder="เช่น 1:เริ่มหลับดีขึ้น | 2:ตื่นมาสดชื่น">
+    </div>
     
     <div class="form-group">
-      <label>เป้าหมาย (สัปดาห์)</label>
+      <label>เป้าหมายรวม (สัปดาห์)</label>
       <input type="number" id="f-tw" placeholder="เช่น 4">
     </div>
     
@@ -209,6 +221,16 @@
 // ==========================================
 const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbwcGgnNZFar-BvNp175wqdiqDXU0A15lJgPO1Wdbavgna5KLo8HPKEgbkm6gpTSAD2G/exec';
 
+// สีของหมวดหมู่เพื่อใช้ในจุดหน้า Progress
+const CAT_COLORS = {
+  'Fat-soluble': '#1D9E75',
+  'Water-soluble': '#378ADD',
+  'Mineral': '#BA7517',
+  'Gut': '#3B6D11',
+  'B Complex': '#7F77DD',
+  'Amino': '#C4377A'
+};
+
 // ==========================================
 // ฐานข้อมูลในเครื่อง
 // ==========================================
@@ -223,10 +245,8 @@ let todayStr = new Date().toISOString().split('T')[0];
 // ฟังก์ชันหลัก (Init & Sync)
 // ==========================================
 async function initApp() {
-  // โหลด Theme
   if(localStorage.getItem('theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
   
-  // โหลดข้อมูลล่าสุดจาก Google Sheets
   document.getElementById('sync-banner').classList.add('show');
   try {
     let res = await fetch(GOOGLE_SHEET_URL);
@@ -234,7 +254,6 @@ async function initApp() {
     supplements = data.supplements || [];
     logs = data.logs || {};
     
-    // แปลง type ข้อมูลกลับมา
     supplements.forEach(s => {
       s.totalPills = Number(s.totalPills);
       s.leftPills = Number(s.leftPills);
@@ -247,8 +266,6 @@ async function initApp() {
   document.getElementById('sync-banner').classList.remove('show');
 
   selectDay(currentDay);
-  
-  // เซ็ตวันที่ปัจจุบันให้ช่อง "วันที่เริ่มกิน" เป็นค่าเริ่มต้น
   document.getElementById('f-start').value = todayStr;
 }
 
@@ -292,38 +309,31 @@ function toggleTheme() {
   }
 }
 
-// ฟังก์ชันปุ่ม "กินทุกวัน" ในฟอร์ม
 function toggleEveryday() {
   const btn = document.getElementById('btn-everyday');
   const checkboxes = document.querySelectorAll('.day-cb');
   const isAllChecked = Array.from(checkboxes).every(cb => cb.checked);
   
   if (isAllChecked) {
-    // ถ้าติ๊กครบหมดแล้ว ให้เอาติ๊กออก
     checkboxes.forEach(cb => cb.checked = false);
     btn.classList.remove('active');
   } else {
-    // ถ้ายังไม่ครบ ให้ติ๊กให้หมด
     checkboxes.forEach(cb => cb.checked = true);
     btn.classList.add('active');
   }
 }
 
-// อัปเดตสถานะปุ่ม "กินทุกวัน" หากผู้ใช้กดติ๊กเองทีละช่อง
 document.querySelectorAll('.day-cb').forEach(cb => {
   cb.addEventListener('change', () => {
     const checkboxes = document.querySelectorAll('.day-cb');
     const isAllChecked = Array.from(checkboxes).every(c => c.checked);
-    if(isAllChecked) {
-      document.getElementById('btn-everyday').classList.add('active');
-    } else {
-      document.getElementById('btn-everyday').classList.remove('active');
-    }
+    if(isAllChecked) document.getElementById('btn-everyday').classList.add('active');
+    else document.getElementById('btn-everyday').classList.remove('active');
   });
 });
 
 // ==========================================
-// ระบบ Schedule (ตารางอัตโนมัติ)
+// ระบบ Schedule
 // ==========================================
 function selectDay(dayKey) {
   currentDay = dayKey;
@@ -334,7 +344,6 @@ function selectDay(dayKey) {
   let thaiDays = {sun:'อาทิตย์', mon:'จันทร์', tue:'อังคาร', wed:'พุธ', thu:'พฤหัสบดี', fri:'ศุกร์', sat:'เสาร์'};
   document.getElementById('today-subtitle').innerText = `ตารางของวัน${thaiDays[dayKey]}`;
   
-  // โหลด Daily Note ของวันนั้นๆ
   let noteKey = `note_${todayStr}`;
   document.getElementById('daily-note').value = logs[noteKey] || '';
 
@@ -349,7 +358,6 @@ function renderSchedule() {
   let hasItem = false;
 
   times.forEach(t => {
-    // กรองหาเฉพาะยาที่ Active, กินวันนี้ และช่วงเวลานี้
     let meds = supplements.filter(s => s.active && s.days.includes(currentDay) && s.time === t);
     
     if(meds.length > 0) {
@@ -406,7 +414,7 @@ function saveDailyNote() {
 }
 
 // ==========================================
-// ระบบ Inventory & Smart Restock
+// ระบบ Inventory & Form
 // ==========================================
 function generateId() { return 'ID_' + Math.random().toString(36).substr(2, 9); }
 
@@ -414,7 +422,6 @@ function saveForm() {
   let name = document.getElementById('f-name').value;
   if(!name) { alert("กรุณาใส่ชื่อยา"); return; }
 
-  // ดึงค่าวันทั้งหมดที่เลือก
   let selectedDays = [];
   document.querySelectorAll('.day-cb:checked').forEach(cb => selectedDays.push(cb.value));
   if(selectedDays.length === 0) { alert("กรุณาเลือกวันกินอย่างน้อย 1 วัน"); return; }
@@ -427,9 +434,12 @@ function saveForm() {
     startDate: document.getElementById('f-start').value,
     time: document.getElementById('f-time').value,
     days: selectedDays.join(','),
-    group: document.getElementById('f-group').value,
-    targetWeeks: Number(document.getElementById('f-tw').value) || 4,
+    cat: 'Other', // ค่าเริ่มต้นสำหรับหมวดหมู่
     cautions: document.getElementById('f-cautions').value || '',
+    targetWeeks: Number(document.getElementById('f-tw').value) || 4,
+    group: document.getElementById('f-group').value,
+    note: document.getElementById('f-note').value || '',
+    milestones: document.getElementById('f-milestones').value || '',
     active: true
   };
 
@@ -439,6 +449,8 @@ function saveForm() {
   document.getElementById('f-name').value = '';
   document.getElementById('f-total').value = '';
   document.getElementById('f-cautions').value = '';
+  document.getElementById('f-note').value = '';
+  document.getElementById('f-milestones').value = '';
   document.querySelectorAll('.day-cb').forEach(cb => cb.checked = false);
   document.getElementById('btn-everyday').classList.remove('active');
 
@@ -451,11 +463,8 @@ function renderInventory() {
   container.innerHTML = '';
 
   supplements.forEach(s => {
-    // Smart Alert: คำนวณว่ากินสัปดาห์ละกี่เม็ด
     let pillsPerWeek = s.days.split(',').length;
-    let weeksLeft = s.leftPills / pillsPerWeek;
     let alertHtml = '';
-    
     if (s.active && s.leftPills <= pillsPerWeek) {
       alertHtml = `<div class="smart-alert">🚨 ของจะหมดภายในสัปดาห์นี้! (เหลือ ${s.leftPills} เม็ด)</div>`;
     }
@@ -507,7 +516,7 @@ function deleteSupp(id) {
 }
 
 // ==========================================
-// ระบบ Progress (คำนวณเป้าหมาย)
+// ระบบ Progress พร้อมการแสดงสรรพคุณและ Milestones
 // ==========================================
 function renderProgress() {
   const container = document.getElementById('progress-content');
@@ -523,14 +532,41 @@ function renderProgress() {
       
       meds.forEach(m => {
         let start = new Date(m.startDate);
-        // คำนวณจำนวนสัปดาห์ที่กินมาแล้ว
         let diffTime = Math.abs(now - start);
         let weeksPassed = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7));
-        if(now < start) weeksPassed = 0; // กรณียังไม่ถึงวันเริ่ม
+        if(now < start) weeksPassed = 0; 
         
         let pct = Math.min(100, Math.round((weeksPassed / m.targetWeeks) * 100));
         let status = (pct >= 100) ? '✅ บรรลุเป้าหมายแล้ว' : `กำลังทำสัปดาห์ที่ ${weeksPassed+1}`;
         if (!m.active) status = '⏸️ หยุดพัก';
+
+        // โค้ดแสดง Note (สรรพคุณ)
+        let noteHtml = m.note ? `<div class="p-note">${m.note}</div>` : '';
+        
+        // โค้ดแปลง Milestones (1:หลับดี | 2:สดชื่น) ให้เป็นจุดสีๆ
+        let msHtml = '';
+        if(m.milestones) {
+          let dotColor = CAT_COLORS[m.cat] || '#1D9E75'; // ดึงสีตามหมวดหมู่ ถ้าไม่มีให้เป็นสีเขียว
+          let parts = m.milestones.split('|');
+          parts.forEach(part => {
+            let split = part.split(':');
+            if(split.length === 2) {
+              let w = parseInt(split[0].trim());
+              let text = split[1].trim();
+              let hit = m.active && (weeksPassed >= w); // เช็คว่ากินถึงสัปดาห์นี้หรือยัง
+              let bColor = hit ? dotColor : '#d3d1c7';
+              let tColor = hit ? 'var(--text)' : '#b4b2a9';
+              let check = hit ? ' ✓' : '';
+              
+              msHtml += `
+                <div class="p-ms">
+                  <div class="p-ms-dot" style="background:${bColor};"></div>
+                  <span class="p-ms-text" style="color:${tColor};">สัปดาห์ ${w} — ${text}${check}</span>
+                </div>
+              `;
+            }
+          });
+        }
 
         html += `
           <div class="prog-card">
@@ -541,10 +577,12 @@ function renderProgress() {
             <div class="prog-bar-bg">
               <div class="prog-bar-fill" style="width: ${m.active ? pct : 0}%; background: ${pct>=100 ? '#1D9E75' : 'var(--primary)'};"></div>
             </div>
-            <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--muted);">
+            <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--muted); margin-bottom:4px;">
               <span>กินมาแล้ว ${weeksPassed} สัปดาห์</span>
               <span>เป้าหมาย ${m.targetWeeks} สัปดาห์</span>
             </div>
+            ${noteHtml}
+            ${msHtml}
           </div>
         `;
       });
