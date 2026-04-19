@@ -100,6 +100,16 @@
   .p-legend { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
   .p-leg { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); font-weight: 400; }
   .p-leg-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* ปรับสี Dropdown ให้สวยงามขึ้น */
+  #f-cat option { padding: 5px; }
+  #f-cat option[value="Fat-soluble"] { color: #1D9E75; font-weight: bold; }
+  #f-cat option[value="Water-soluble"] { color: #378ADD; font-weight: bold; }
+  #f-cat option[value="Mineral"] { color: #BA7517; font-weight: bold; }
+  #f-cat option[value="Gut"] { color: #3B6D11; font-weight: bold; }
+  #f-cat option[value="B Complex"] { color: #7F77DD; font-weight: bold; }
+  #f-cat option[value="Amino"] { color: #C4377A; font-weight: bold; }
+  #f-cat option[value="Other"] { color: #888780; font-weight: bold; }
 </style>
 </head>
 <body>
@@ -164,14 +174,14 @@
 
     <div class="form-group">
       <label>หมวดหมู่ (สีของยา)</label>
-      <select id="f-cat">
-        <option value="Fat-soluble">Fat-soluble (สีเขียวอมฟ้า)</option>
-        <option value="Water-soluble">Water-soluble (สีฟ้า)</option>
-        <option value="Mineral">Mineral (สีน้ำตาลทอง)</option>
-        <option value="Gut">Gut (สีเขียวเข้ม)</option>
-        <option value="B Complex">B Complex (สีม่วง)</option>
-        <option value="Amino">Amino / Antioxidant (สีชมพูแดง)</option>
-        <option value="Other">อื่นๆ (สีเทา)</option>
+      <select id="f-cat" onchange="updateCatColor()">
+        <option value="Fat-soluble">🟢 Fat-soluble (สีเขียวอมฟ้า)</option>
+        <option value="Water-soluble">🔵 Water-soluble (สีฟ้า)</option>
+        <option value="Mineral">🟠 Mineral (สีน้ำตาลทอง)</option>
+        <option value="Gut">🌿 Gut (สีเขียวเข้ม)</option>
+        <option value="B Complex">🟣 B Complex (สีม่วง)</option>
+        <option value="Amino">🌸 Amino / Antioxidant (สีชมพูแดง)</option>
+        <option value="Other">⚪️ อื่นๆ (สีเทา)</option>
       </select>
     </div>
     
@@ -297,6 +307,7 @@ async function initApp() {
 
   selectDay(currentDay);
   document.getElementById('f-start').value = todayStr;
+  updateCatColor(); // อัปเดตสีช่อง Dropdown ตอนโหลด
 }
 
 function syncData() {
@@ -337,6 +348,14 @@ function toggleTheme() {
     document.body.setAttribute('data-theme', 'dark');
     localStorage.setItem('theme', 'dark');
   }
+}
+
+// เปลี่ยนสีตัวหนังสือในกล่องเลือกหมวดหมู่ตอนที่เลือก
+function updateCatColor() {
+  const sel = document.getElementById('f-cat');
+  const val = sel.value;
+  sel.style.color = CAT_THEME[val] ? CAT_THEME[val].color : 'var(--text)';
+  sel.style.fontWeight = 'bold';
 }
 
 function toggleEveryday() {
@@ -463,7 +482,7 @@ function saveForm() {
   let newObj = {
     id: generateId(),
     name: name,
-    cat: document.getElementById('f-cat').value, // เพิ่มหมวดหมู่สี
+    cat: document.getElementById('f-cat').value, // หมวดหมู่สี
     totalPills: Number(document.getElementById('f-total').value) || 30,
     leftPills: Number(document.getElementById('f-total').value) || 30,
     startDate: document.getElementById('f-start').value,
@@ -485,7 +504,8 @@ function saveForm() {
   document.getElementById('f-cautions').value = '';
   document.getElementById('f-note').value = '';
   document.getElementById('f-milestones').value = '';
-  document.getElementById('f-cat').value = 'Fat-soluble'; // รีเซ็ตหมวดหมู่
+  document.getElementById('f-cat').value = 'Fat-soluble'; 
+  updateCatColor();
   document.querySelectorAll('.day-cb').forEach(cb => cb.checked = false);
   document.getElementById('btn-everyday').classList.remove('active');
 
